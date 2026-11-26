@@ -111,7 +111,7 @@ const ExportPanel: React.FC<Props> = ({ storyboard, chapterLabel, theme, loadBac
 
   return (
     <section className="panel">
-      <h2>4 · Export video</h2>
+      <h2>5 · Export video</h2>
       <p className="muted small">
         Exports <b>{chapterLabel}</b> as {typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported('video/mp4') ? '.mp4 (supported by this browser)' : '.webm (this browser records webm; mp4 is not supported by its MediaRecorder)'} —
         1280×720 canvas at 30 fps, all scenes animated with burned-in captions.

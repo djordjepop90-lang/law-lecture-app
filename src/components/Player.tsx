@@ -183,7 +183,7 @@ const Player: React.FC<Props> = ({ storyboard, chapterLabel, voice, lang, theme,
 
   return (
     <section className="panel playerpanel">
-      <h2>3 · Lecture player</h2>
+      <h2>4 · Lecture player</h2>
       <div className="canvaswrap">
         <canvas ref={canvasRef} width={W} height={H} />
         {playing && paused && <div className="overlay">Paused</div>}

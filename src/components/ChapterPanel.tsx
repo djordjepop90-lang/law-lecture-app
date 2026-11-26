@@ -19,7 +19,7 @@ const ChapterPanel: React.FC<Props> = ({ chapters, selected, onToggle, onSelectA
   const allDone = selected.length > 0 && selected.every((id) => storyboards[id]);
   return (
     <section className="panel">
-      <h2>2 · Select chapters & generate storyboards</h2>
+      <h2>3 · Select chapters & generate storyboards</h2>
       <div className="row gap">
         <button onClick={onSelectAll}>All</button>
         <button onClick={onSelectNone}>None</button>

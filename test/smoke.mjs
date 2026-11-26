@@ -3,6 +3,7 @@ import { detectChapters } from '../src/chapters.ts';
 import { detectLanguage, wordCount } from '../src/textutil.ts';
 import { retrieveRelevantPages } from '../src/retrieve.ts';
 import { generateOutlineLocal, generateStoryboardLocal, answerQuestionLocal, splitIntoSegments, extractArticles, extractCases } from '../src/engine.ts';
+import { LANGUAGES, languageName, detectLanguageWide, rankVoices, planUtterances, MAX_UTTERANCE_CHARS } from '../src/reader.ts';
 
 let failures = 0;
 const ok = (cond, msg) => { console.log((cond ? 'PASS' : 'FAIL') + ' - ' + msg); if (!cond) failures++; };
@@ -90,6 +91,56 @@ const qa = answerQuestionLocal('When is self-defence allowed under the UN Charte
 ok(qa.foundInMaterial && qa.pageReferences.includes(2) && /self-defence/i.test(qa.answer), 'Q&A finds self-defence on page 2');
 const qa2 = answerQuestionLocal('What is the capital of France?', qaPages, 'en', null);
 ok(!qa2.foundInMaterial, 'Q&A says not-in-material when irrelevant');
+
+// --- read-aloud: language catalog ----------------------------------------------------
+ok(LANGUAGES.length >= 50, `language catalog covers >=50 languages (${LANGUAGES.length})`);
+ok(new Set(LANGUAGES.map((l) => l.tag)).size === LANGUAGES.length, 'language tags unique');
+ok(['en-US', 'de-DE', 'fr-FR', 'es-ES', 'zh-CN', 'ja-JP', 'ko-KR', 'ru-RU', 'ar-SA', 'hi-IN'].every((t) => LANGUAGES.some((l) => l.tag === t)), 'key BCP-47 tags present');
+ok(languageName('de-DE') === 'German' && languageName('de-AT') === 'German' && languageName('xx-XX') === 'xx-XX', 'languageName resolves tag/base/unknown');
+
+// --- read-aloud: any-language detection ------------------------------------------------
+ok(detectLanguageWide('The court held that the treaty is binding and the parties must comply with the judgment of the ICJ.') === 'en-US', 'wide detect EN');
+ok(detectLanguageWide('Der Gerichtshof hat entschieden, dass der Vertrag bindend ist und die Parteien das Urteil befolgen m\u00fcssen. Das ist das Recht.') === 'de-DE', 'wide detect DE');
+ok(detectLanguageWide('La cour a d\u00e9cid\u00e9 que le trait\u00e9 est contraignant et les parties doivent se conformer \u00e0 la d\u00e9cision.') === 'fr-FR', 'wide detect FR');
+ok(detectLanguageWide('El tribunal decidi\u00f3 que el tratado es vinculante y las partes deben cumplir la sentencia del tribunal.') === 'es-ES', 'wide detect ES');
+ok(detectLanguageWide('\u041f\u0440\u0438\u0432\u0435\u0442 \u043c\u0438\u0440, \u044d\u0442\u043e \u0440\u0443\u0441\u0441\u043a\u0438\u0439 \u0442\u0435\u043a\u0441\u0442 \u043e \u0434\u043e\u0433\u043e\u0440\u0435 \u0438 \u0441\u0443\u0434\u0435.') === 'ru-RU', 'wide detect RU (cyrillic)');
+ok(detectLanguageWide('\u0426\u0435 \u0443\u043a\u0440\u0430\u0457\u043d\u0441\u044c\u043a\u0438\u0439 \u0442\u0435\u043a\u0441\u0442 \u043f\u0440\u043e \u0434\u043e\u0433\u043e\u0440 \u0456 \u0441\u0443\u0434.') === 'uk-UA', 'wide detect UK (yi/i)');
+ok(detectLanguageWide('\u8fd9\u662f\u4e00\u6bb5\u4e2d\u6587\u6587\u672c\uff0c\u5173\u4e8e\u6761\u7ea6\u4e0e\u56fd\u9645\u6cd5\u9662\u3002') === 'zh-CN', 'wide detect ZH (han, no kana)');
+ok(detectLanguageWide('\u3053\u308c\u306f\u65e5\u672c\u8a9e\u306e\u30c6\u30ad\u30b9\u30c8\u3067\u3059\u3002\u6761\u7d04\u306b\u3064\u3044\u3066\u8a71\u3057\u307e\u3059\u3002') === 'ja-JP', 'wide detect JA (kana beats han)');
+ok(detectLanguageWide('\u0647\u0630\u0627 \u0646\u0635 \u0639\u0631\u0628\u064a \u0639\u0646 \u0627\u0644\u0645\u0639\u0627\u0647\u062f\u0627\u062a \u0648\u0627\u0644\u0645\u062d\u0643\u0645\u0629 \u0627\u0644\u062f\u0648\u0644\u064a\u0629.') === 'ar-SA', 'wide detect AR');
+ok(detectLanguageWide('\u092f\u0939 \u090f\u0915 \u0939\u093f\u0902\u0926\u0940 \u0935\u093e\u0915\u094d\u092f \u0939\u0948 \u091c\u094b \u0938\u0902\u0927\u093f \u0915\u0947 \u092c\u093e\u0930\u0947 \u092e\u0947\u0902 \u0939\u0948\u0964') === 'hi-IN', 'wide detect HI (devanagari)');
+ok(detectLanguageWide('Lorem ipsum dolor sit amet 12345 !!!') === 'unknown', 'wide detect unknown on weak signal');
+
+// --- read-aloud: voice ranking ---------------------------------------------------------
+const fakeVoices = [
+  { name: 'Alex', lang: 'en-US', voiceURI: 'alex', localService: true, isDefault: false },
+  { name: 'Google US English', lang: 'en-US', voiceURI: 'gus', localService: false, isDefault: false },
+  { name: 'Microsoft Aria Neural - English (United States)', lang: 'en-US', voiceURI: 'aria', localService: true, isDefault: true },
+  { name: 'Daniel', lang: 'en-GB', voiceURI: 'daniel', localService: true, isDefault: false },
+  { name: 'Google Deutsch', lang: 'de-DE', voiceURI: 'gde', localService: false, isDefault: false },
+];
+const rEn = rankVoices(fakeVoices, 'en-US');
+ok(rEn[0].voiceURI === 'aria', 'neural+default voice ranks first for en-US');
+ok(rEn.some((v) => v.voiceURI === 'daniel'), 'en-GB matched via base-language prefix for en-US');
+ok(rEn.every((v) => v.lang.toLowerCase().startsWith('en')), 'only en voices returned for en-US');
+ok(rEn.find((v) => v.voiceURI === 'aria').badge === 'Neural', 'quality badge extracted (Neural)');
+ok(rankVoices(fakeVoices, 'de')[0]?.voiceURI === 'gde', 'base tag de matches de-DE voice');
+ok(rankVoices(fakeVoices, 'ja-JP').length === 0, 'no ja voices -> empty list');
+
+// --- read-aloud: utterance chunking ------------------------------------------------------
+const readerPages = [
+  { index: 1, text: 'First sentence here. Second sentence follows! And a third one?', wordCount: 0 },
+  { index: 2, text: '', wordCount: 0 },
+  { index: 3, text: 'Page three has ' + 'verylongword '.repeat(40) + 'end.', wordCount: 0 },
+  { index: 4, text: 'x'.repeat(300), wordCount: 0 },
+];
+const utts = planUtterances(readerPages, MAX_UTTERANCE_CHARS);
+ok(utts.length >= 4, `document chunked into utterances (${utts.length})`);
+ok(utts.every((u) => u.text.length <= MAX_UTTERANCE_CHARS || !u.text.includes(' ')), 'chunks within char limit unless a single long word');
+ok(utts.every((u) => u.page === 1 || u.page === 3 || u.page === 4), 'empty page skipped, page provenance kept');
+ok(utts.filter((u) => u.page === 1).map((u) => u.text).join(' ').includes('Second sentence follows'), 'sentence order preserved');
+ok(utts.map((u) => u.text).join(' ').includes('verylongword'), 'long words not dropped');
+ok(utts.some((u) => u.page === 4 && u.text.length === 300), 'single overlong word kept as one chunk');
 
 console.log(failures === 0 ? '\nALL TESTS PASSED' : `\n${failures} FAILURES`);
 process.exit(failures === 0 ? 0 : 1);
