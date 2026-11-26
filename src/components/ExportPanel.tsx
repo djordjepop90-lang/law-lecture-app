@@ -39,6 +39,12 @@ const ExportPanel: React.FC<Props> = ({ storyboard, chapterLabel, theme }) => {
       setProgress(`Recording (${isMp4 ? 'mp4' : 'webm'})…`);
       const canvas = document.createElement('canvas');
       canvas.width = W; canvas.height = H;
+      // Attach offscreen: some browsers only capture frames from canvases
+      // that are in the document and being painted.
+      canvas.style.position = 'fixed';
+      canvas.style.left = '-10000px';
+      canvas.style.top = '0';
+      document.body.appendChild(canvas);
       const ctx = canvas.getContext('2d')!;
       const stream = canvas.captureStream(30);
       const recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 5_000_000 });
@@ -82,6 +88,7 @@ const ExportPanel: React.FC<Props> = ({ storyboard, chapterLabel, theme }) => {
       });
       recorder.stop();
       const blob = await done;
+      canvas.remove();
       const url = URL.createObjectURL(blob);
       setLink(url);
       setProgress(`Done — ${(blob.size / 1024 / 1024).toFixed(1)} MB`);
@@ -92,6 +99,7 @@ const ExportPanel: React.FC<Props> = ({ storyboard, chapterLabel, theme }) => {
     } catch (e) {
       setError(`Export failed: ${e instanceof Error ? e.message : String(e)}`);
     } finally {
+      document.querySelectorAll('canvas').forEach((c) => { if (c.style.left === '-10000px') c.remove(); });
       setBusy(false);
     }
   };

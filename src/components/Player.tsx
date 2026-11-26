@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Storyboard, Scene } from '../types';
-import { speakScene, pauseSpeech, resumeSpeech, stopSpeech, estimateSceneDuration, type SystemVoice, type SpeakHandle } from '../audio';
+import { speakScene, pauseSpeech, resumeSpeech, stopSpeech, estimateSceneDuration, getSystemVoices, type SystemVoice, type SpeakHandle } from '../audio';
 import { renderScene, W, H } from '../renderer';
 
 interface Props {
@@ -23,12 +23,17 @@ const Player: React.FC<Props> = ({ storyboard, chapterLabel, voice, lang, theme 
   const [showCaptions, setShowCaptions] = useState(true);
   const [progress, setProgress] = useState(0);
   const handleRef = useRef<SpeakHandle | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
+  const voicesAvailableRef = useRef(true);
   const sceneRef = useRef(0);
   const playingRef = useRef(false);
+  const pausedRef = useRef(false);
   const speedRef = useRef(1);
   sceneRef.current = sceneIndex;
   playingRef.current = playing && !paused;
+  pausedRef.current = paused;
   speedRef.current = speed;
+  voicesAvailableRef.current = typeof speechSynthesis !== 'undefined' && getSystemVoices().length > 0;
 
   const scene: Scene = storyboard.scenes[sceneIndex];
   const durations = useMemo(
@@ -40,6 +45,7 @@ const Player: React.FC<Props> = ({ storyboard, chapterLabel, voice, lang, theme 
   const stop = useCallback(() => {
     handleRef.current?.cancel();
     handleRef.current = null;
+    if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = undefined; }
     stopSpeech();
   }, []);
 
@@ -50,18 +56,46 @@ const Player: React.FC<Props> = ({ storyboard, chapterLabel, voice, lang, theme 
     if (!sc) return;
     setPlaying(true);
     setPaused(false);
-    handleRef.current = speakScene(
-      sc, voice, lang, speedRef.current,
-      (p) => setProgress(p),
-      () => {
-        if (sceneRef.current < storyboard.scenes.length - 1) {
-          setSceneIndex(sceneRef.current + 1);
-          playScene(sceneRef.current + 1);
-        } else {
-          setPlaying(false);
+    // Timer-driven progress so animations always advance, even if the
+    // browser fires no speech boundary events or has no voices at all.
+    const est = estimateSceneDuration(sc, speedRef.current);
+    const t0 = performance.now();
+    const iv = setInterval(() => {
+      if (!playingRef.current || pausedRef.current) return;
+      const el = ((performance.now() - t0) / 1000) * speedRef.current;
+      setProgress((prev) => Math.max(prev, Math.min(1, el / est)));
+    }, 100);
+    timerRef.current = iv;
+    const speechOk = typeof speechSynthesis !== 'undefined' && (voicesAvailableRef.current || getSystemVoices().length > 0);
+    if (speechOk) {
+      handleRef.current = speakScene(
+        sc, voice, lang, speedRef.current,
+        (p) => setProgress(p), // real spoken position overrides the estimate
+        () => {
+          clearInterval(iv);
+          if (sceneRef.current < storyboard.scenes.length - 1) {
+            setSceneIndex(sceneRef.current + 1);
+            playScene(sceneRef.current + 1);
+          } else {
+            setPlaying(false);
+          }
+        },
+      );
+    } else {
+      // No speech available: silent playback, animations driven by the timer.
+      handleRef.current = null;
+      const endIv = setInterval(() => {
+        if (!playingRef.current || pausedRef.current) return;
+        if ((performance.now() - t0) / 1000 * speedRef.current >= est) {
+          clearInterval(endIv);
+          clearInterval(iv);
+          if (sceneRef.current < storyboard.scenes.length - 1) {
+            setSceneIndex(sceneRef.current + 1);
+            playScene(sceneRef.current + 1);
+          } else setPlaying(false);
         }
-      },
-    );
+      }, 200);
+    }
   }, [storyboard, voice, lang, stop]);
 
   const togglePlay = () => {
