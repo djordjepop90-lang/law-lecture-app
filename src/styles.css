@@ -1,0 +1,95 @@
+:root { color-scheme: dark; }
+* { box-sizing: border-box; }
+body { margin: 0; font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif; }
+.app { min-height: 100vh; padding: 16px 24px 48px; }
+.app.dark { background: #0b0f1a; color: #e8ecf6; }
+.app.light { background: #f3f1ea; color: #1d2433; }
+.app.light .panel { background: #fff; border-color: #d8d2c2; }
+.app.light .muted { color: #5c6577; }
+.app.light input, .app.light select, .app.light textarea { background: #fff; color: #1d2433; border-color: #c9c2ae; }
+.app.light .statusbar { background: #eceadf; color: #1d2433; }
+.app.light .statusbar.warn { background: #f6d9c8; }
+.app.light .dropzone { background: #faf8f1; border-color: #c9c2ae; }
+.app.light .tlscene { background: #d9d3c0; color: #1d2433; }
+.app.light .tlscene.active { background: #2b5bd7; color: #fff; }
+.app.light .scenelist li.active, .app.light .chapterlist li { border-color: #d8d2c2; }
+
+h1 { font-size: 22px; margin: 8px 0 12px; }
+h2 { font-size: 17px; margin: 4px 0 10px; }
+.muted { opacity: 0.72; }
+.small { font-size: 12px; }
+.error { color: #ff8f6b; }
+.app.light .error { color: #c2410c; }
+.error button { margin-left: 8px; }
+
+.panel { background: #141b2e; border: 1px solid #263télé; border: 1px solid #26314f; border-radius: 12px; padding: 14px 16px; margin: 12px 0; }
+.row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.row.gap > * { margin-right: 6px; }
+.spacer { flex: 1; }
+
+button { background: #22304f; color: inherit; border: 1px solid #33436b; border-radius: 8px; padding: 6px 12px; cursor: pointer; font-size: 13px; }
+button:hover:not(:disabled) { background: #2c3d63; }
+button:disabled { opacity: 0.5; cursor: default; }
+button.primary { background: #2b5bd7; border-color: #2b5bd7; color: #fff; }
+button.primary:hover:not(:disabled) { background: #3568e8; }
+button.danger { background: #5b2320; border-color: #7a2f2a; }
+
+input, select, textarea { background: #0f1626; color: inherit; border: 1px solid #33436b; border-radius: 8px; padding: 6px 10px; font-size: 13px; min-width: 0; }
+input[type="checkbox"] { min-width: auto; }
+label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+label.row { flex-direction: row; align-items: center; gap: 6px; }
+
+.statusbar { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: 10px; background: #101a30; border: 1px solid #26314f; border-radius: 10px; padding: 8px 14px; margin: 10px 0; font-size: 13px; }
+.statusbar.warn { background: #3a2410; border-color: #8a5a1e; }
+.statusbar .dot { width: 9px; height: 9px; border-radius: 50%; background: #5fd39a; }
+.statusbar.warn .dot { background: #ffb14f; }
+.statusbar em { opacity: 0.7; font-style: normal; }
+.slowtoggle { flex-direction: row; align-items: center; gap: 6px; font-size: 12px; }
+
+.settings summary { cursor: pointer; font-weight: 600; }
+.settings-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; margin-top: 10px; }
+.settings-grid .row { grid-column: 1 / -1; }
+
+.dropzone { border: 2px dashed #33436b; border-radius: 12px; padding: 28px; text-align: center; cursor: pointer; margin: 8px 0; }
+.dropzone:hover { background: #16203a; }
+
+.pagelist { max-height: 220px; overflow: auto; font-size: 12px; padding-left: 16px; }
+.chapterlist { list-style: none; padding: 0; max-height: 260px; overflow: auto; }
+.chapterlist li { border: 1px solid #26314f; border-radius: 8px; margin: 4px 0; }
+.chapterlist label { flex-direction: row; align-items: center; gap: 10px; padding: 8px 10px; cursor: pointer; }
+.chtitle { font-weight: 600; flex: 1; }
+.estimate { background: #101a30; border-radius: 8px; padding: 8px 10px; font-size: 13px; }
+
+.progress { position: relative; background: #0f1626; border-radius: 8px; height: 26px; overflow: hidden; margin: 8px 0; }
+.progress.small { width: 180px; height: 12px; display: inline-block; vertical-align: middle; }
+.progress .bar { position: absolute; inset: 0 auto 0 0; background: #2b5bd7; transition: width 0.3s; }
+.progress span { position: relative; z-index: 1; font-size: 12px; line-height: 26px; padding-left: 10px; }
+
+.maincols { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 12px; align-items: start; }
+@media (max-width: 1100px) { .maincols { grid-template-columns: 1fr; } }
+
+.canvaswrap { position: relative; }
+.canvaswrap canvas { width: 100%; aspect-ratio: 16 / 9; border-radius: 10px; border: 1px solid #26314f; background: #000; display: block; }
+.overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(8, 12, 22, 0.55); border-radius: 10px; font-size: 14px; }
+.controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 10px 0; }
+.controls label { flex-direction: row; align-items: center; gap: 6px; }
+
+.timeline { position: relative; height: 30px; background: #0f1626; border-radius: 8px; margin: 8px 0; overflow: hidden; }
+.tlscene { position: absolute; top: 3px; bottom: 3px; border: none; border-radius: 5px; background: #2a3854; color: #cfd8ec; font-size: 11px; overflow: hidden; padding: 0; }
+.tlscene.active { background: #2b5bd7; color: #fff; }
+.tlprogress { position: absolute; top: 0; bottom: 0; left: 0; background: rgba(122, 162, 255, 0.25); pointer-events: none; }
+
+.scenelist { list-style: none; padding: 0; font-size: 13px; max-height: 180px; overflow: auto; }
+.scenelist li { display: flex; align-items: center; gap: 8px; padding: 4px 6px; border-radius: 6px; }
+.scenelist li.active { background: #1a2540; }
+.scenelist button { background: none; border: none; padding: 0; text-align: left; flex: 1; font-size: 13px; }
+.fallbacktag { color: #ffb14f; font-size: 11px; display: flex; gap: 6px; align-items: center; }
+
+.sidebar .glossary { list-style: none; padding: 0; max-height: 260px; overflow: auto; font-size: 13px; }
+.sidebar .glossary li { margin: 6px 0; display: flex; flex-direction: column; }
+.qalist { list-style: none; padding: 0; font-size: 13px; }
+.qalist li { border-top: 1px solid #26314f; padding: 8px 0; }
+.qq { font-weight: 600; margin: 0 0 4px; }
+.qa { margin: 0 0 4px; white-space: pre-wrap; }
+
+footer { margin-top: 24px; }
