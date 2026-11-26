@@ -51,21 +51,34 @@ const ExportPanel: React.FC<Props> = ({ storyboard, chapterLabel, theme }) => {
       const total = durations.reduce((a, b) => a + b, 0);
       const t0 = performance.now();
       await new Promise<void>((resolve) => {
-        const tick = async () => {
-          const elapsed = (performance.now() - t0) / 1000;
-          const p = Math.min(1, elapsed / total);
-          let si = 0, acc = 0;
-          for (let i = 0; i < durations.length; i++) { if (elapsed >= acc) { si = i; } acc += durations[i]; }
-          const sceneProgress = Math.min(1, Math.max(0, (elapsed - durations.slice(0, si).reduce((a, b) => a + b, 0)) / durations[si]));
-          await renderScene(ctx, storyboard.scenes[si], {
-            theme, progress: sceneProgress, showCaptions: true, chapterLabel,
-            sceneIndex: si, sceneCount: storyboard.scenes.length, timeSeconds: elapsed,
-          });
-          setProgress(`Exporting… scene ${si + 1}/${storyboard.scenes.length} · ${Math.round(p * 100)}%`);
-          if (elapsed < total + 0.25) requestAnimationFrame(() => { void tick(); });
-          else resolve();
-        };
-        void tick();
+        // Timer-driven loop (not rAF) so a hidden/throttled tab cannot stall
+        // the export; every frame is exception-proof so one bad scene can
+        // never freeze the whole export.
+        const iv = setInterval(() => {
+          void (async () => {
+            try {
+              const elapsed = (performance.now() - t0) / 1000;
+              const p = Math.min(1, elapsed / total);
+              let si = 0, acc = 0;
+              for (let i = 0; i < durations.length; i++) { if (elapsed >= acc) { si = i; } acc += durations[i]; }
+              const sceneStart = durations.slice(0, si).reduce((a, b) => a + b, 0);
+              const sceneProgress = Math.min(1, Math.max(0, (elapsed - sceneStart) / Math.max(0.001, durations[si])));
+              await renderScene(ctx, storyboard.scenes[si], {
+                theme, progress: sceneProgress, showCaptions: true, chapterLabel,
+                sceneIndex: si, sceneCount: storyboard.scenes.length, timeSeconds: elapsed,
+              });
+              setProgress(`Exporting… scene ${si + 1}/${storyboard.scenes.length} · ${Math.round(p * 100)}%`);
+              if (elapsed >= total + 0.25) {
+                clearInterval(iv);
+                resolve();
+              }
+            } catch (e) {
+              // keep exporting even if one frame fails
+              console.error('export frame failed', e);
+              setProgress((prev) => prev + ' (recovered from a frame error)');
+            }
+          })();
+        }, 33);
       });
       recorder.stop();
       const blob = await done;

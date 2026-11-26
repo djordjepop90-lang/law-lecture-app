@@ -98,10 +98,14 @@ const Player: React.FC<Props> = ({ storyboard, chapterLabel, voice, lang, theme 
     let raf = 0;
     const loop = async () => {
       if (!alive) return;
-      await renderScene(ctx, scene, {
-        theme, progress, showCaptions, chapterLabel,
-        sceneIndex, sceneCount: storyboard.scenes.length, timeSeconds: progress * durations[sceneIndex],
-      });
+      try {
+        await renderScene(ctx, scene, {
+          theme, progress, showCaptions, chapterLabel,
+          sceneIndex, sceneCount: storyboard.scenes.length, timeSeconds: progress * durations[sceneIndex],
+        });
+      } catch (e) {
+        console.error('render failed', e); // keep the loop alive on a bad frame
+      }
       raf = requestAnimationFrame(() => { void loop(); });
     };
     void loop();

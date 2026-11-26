@@ -156,13 +156,18 @@ function esc(s: string): string {
 async function drawSvgOnCanvas(ctx: CanvasRenderingContext2D, svg: string, x: number, y: number, w: number, h: number): Promise<void> {
   const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
   try {
-    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const img = await new Promise<HTMLImageElement | null>((resolve) => {
       const im = new Image();
       im.onload = () => resolve(im);
-      im.onerror = reject;
+      im.onerror = () => resolve(null); // never let a bad SVG kill the render loop
       im.src = url;
     });
-    ctx.drawImage(img, x, y, w, h);
+    if (img) ctx.drawImage(img, x, y, w, h);
+    else {
+      ctx.fillStyle = '#888';
+      ctx.font = '20px sans-serif';
+      ctx.fillText('(diagram could not be rendered)', x + 20, y + 40);
+    }
   } finally {
     URL.revokeObjectURL(url);
   }
