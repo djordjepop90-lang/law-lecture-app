@@ -9,12 +9,15 @@ interface Props {
   voice: SystemVoice | null;
   lang: string;
   theme: 'dark' | 'light';
+  loadBackground: (scene: Scene) => Promise<HTMLCanvasElement | null>;
 }
 
 // Player driven by the browser's speechSynthesis: utterance boundary events
 // give the real spoken position, which drives scene progress, reveals,
 // citation highlighting and captions.
-const Player: React.FC<Props> = ({ storyboard, chapterLabel, voice, lang, theme }) => {
+const Player: React.FC<Props> = ({ storyboard, chapterLabel, voice, lang, theme, loadBackground }) => {
+  const bgRef = useRef<HTMLCanvasElement | null>(null);
+  const bgCache = useRef(new Map<string, HTMLCanvasElement | null>());
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [sceneIndex, setSceneIndex] = useState(0);
   const [playing, setPlaying] = useState(false);
@@ -118,6 +121,19 @@ const Player: React.FC<Props> = ({ storyboard, chapterLabel, voice, lang, theme 
 
   useEffect(() => { stop(); setSceneIndex(0); setProgress(0); setPlaying(false); setPaused(false); }, [storyboard.chapterId, stop]);
 
+  // load the original slide/page background for the current scene (cached)
+  useEffect(() => {
+    let alive = true;
+    bgRef.current = bgCache.current.get(scene.id) ?? null;
+    if (!bgCache.current.has(scene.id)) {
+      void loadBackground(scene).then((bg) => {
+        bgCache.current.set(scene.id, bg);
+        if (alive) bgRef.current = bg;
+      });
+    }
+    return () => { alive = false; };
+  }, [scene, loadBackground]);
+
   // re-speak at new speed when speed changes mid-scene
   useEffect(() => {
     if (playingRef.current && !paused) playScene(sceneRef.current);
@@ -136,6 +152,7 @@ const Player: React.FC<Props> = ({ storyboard, chapterLabel, voice, lang, theme 
         await renderScene(ctx, scene, {
           theme, progress, showCaptions, chapterLabel,
           sceneIndex, sceneCount: storyboard.scenes.length, timeSeconds: progress * durations[sceneIndex],
+          background: bgRef.current,
         });
       } catch (e) {
         console.error('render failed', e); // keep the loop alive on a bad frame

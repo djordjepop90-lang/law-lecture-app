@@ -40,6 +40,17 @@ function xmlText(xml: string): string {
   return runs.join(' ').replace(/\s+/g, ' ').trim();
 }
 
+function slideParagraphs(xml: string): string[] {
+  const paras: string[] = [];
+  const pRe = /<a:p(?:\s[^>]*)?>([\s\S]*?)<\/a:p>/g;
+  let m: RegExpExecArray | null;
+  while ((m = pRe.exec(xml)) !== null) {
+    const t = xmlText(m[1]);
+    if (t) paras.push(t);
+  }
+  return paras;
+}
+
 export async function extractPptx(file: File): Promise<PageText[]> {
   const zip = await JSZip.loadAsync(await file.arrayBuffer());
   const slideNames = Object.keys(zip.files)
@@ -52,7 +63,8 @@ export async function extractPptx(file: File): Promise<PageText[]> {
   const pages: PageText[] = [];
   for (let i = 0; i < slideNames.length; i++) {
     const xml = await zip.file(slideNames[i])!.async('string');
-    let text = xmlText(xml);
+    const paras = slideParagraphs(xml);
+    let text = paras.join(' ');
     // Speaker notes, if present: ppt/notesSlides/notesSlideN.xml
     const notesName = `ppt/notesSlides/notesSlide${i + 1}.xml`;
     if (zip.file(notesName)) {
@@ -60,7 +72,13 @@ export async function extractPptx(file: File): Promise<PageText[]> {
       const notes = xmlText(notesXml);
       if (notes) text = (text + ' ' + notes).trim();
     }
-    pages.push({ index: i + 1, text, wordCount: wordCount(text) });
+    pages.push({
+      index: i + 1,
+      text,
+      wordCount: wordCount(text),
+      title: paras[0],
+      bullets: paras.slice(1),
+    });
   }
   return pages;
 }

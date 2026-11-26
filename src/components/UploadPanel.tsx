@@ -4,7 +4,7 @@ import { LANGUAGE_NAMES } from '../types';
 import { extractDocument } from '../extract';
 
 interface Props {
-  onDocument: (doc: SourceDocument, language: LanguageCode | 'unknown') => void;
+  onDocument: (doc: SourceDocument, language: LanguageCode | 'unknown', file: File) => void;
   busy: boolean;
 }
 
@@ -15,8 +15,10 @@ const UploadPanel: React.FC<Props> = ({ onDocument, busy }) => {
   const [pending, setPending] = useState<(Omit<SourceDocument, 'id' | 'uploadedAt'> & { language: LanguageCode | 'unknown' }) | null>(null);
   const [langChoice, setLangChoice] = useState<LanguageCode | 'unknown'>('unknown');
 
+  const fileRef = useRef<File | null>(null);
   const handleFile = async (f: File) => {
     setError('');
+    fileRef.current = f;
     try {
       const extracted = await extractDocument(f);
       setPending({ ...extracted });
@@ -70,7 +72,7 @@ const UploadPanel: React.FC<Props> = ({ onDocument, busy }) => {
           <button
             className="primary"
             disabled={pending.scanned}
-            onClick={() => onDocument({ ...pending, id: `doc-${Date.now()}`, uploadedAt: Date.now() } as SourceDocument, langChoice)}
+            onClick={() => onDocument({ ...pending, id: `doc-${Date.now()}`, uploadedAt: Date.now() } as SourceDocument, langChoice, fileRef.current!)}
           >
             Use this document →
           </button>
