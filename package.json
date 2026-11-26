@@ -9,16 +9,16 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "jszip": "*",
-    "pdfjs-dist": "*",
-    "react": "*",
-    "react-dom": "*"
+    "pdfjs-dist": "^6.5.438",
+    "jszip": "^3.10.2",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
   },
   "devDependencies": {
-    "@types/react": "*",
-    "@types/react-dom": "*",
-    "@vitejs/plugin-react": "*",
-    "typescript": "*",
-    "vite": "*"
+    "@types/react": "^19.3.3",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.3.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.8"
   }
 }
