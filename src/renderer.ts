@@ -183,6 +183,7 @@ export interface RenderOptions {
   sceneIndex: number;
   sceneCount: number;
   timeSeconds: number; // absolute time in scene, for subtle motion
+  background?: HTMLCanvasElement | null; // original slide/page, drawn dimmed behind content
 }
 
 export async function renderScene(ctx: CanvasRenderingContext2D, scene: Scene, o: RenderOptions): Promise<void> {
@@ -190,6 +191,19 @@ export async function renderScene(ctx: CanvasRenderingContext2D, scene: Scene, o
   const p = Math.min(1, Math.max(0, o.progress));
   ctx.fillStyle = t.bg;
   ctx.fillRect(0, 0, W, H);
+
+  // original slide/page as animated background: subtle zoom synced to progress
+  if (o.background) {
+    const img = o.background;
+    const zoom = 1 + 0.07 * p;
+    const dw = img.width * zoom, dh = img.height * zoom;
+    ctx.save();
+    ctx.globalAlpha = 0.9;
+    ctx.drawImage(img, (W - dw) / 2, (H - dh) / 2, dw, dh);
+    ctx.restore();
+    ctx.fillStyle = o.theme === 'dark' ? 'rgba(10,14,24,0.78)' : 'rgba(247,245,239,0.82)';
+    ctx.fillRect(0, 0, W, H);
+  }
 
   // header
   ctx.fillStyle = t.muted;

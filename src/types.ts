@@ -2,6 +2,8 @@ export interface PageText {
   index: number; // 1-based page/slide number
   text: string;
   wordCount: number;
+  title?: string; // PPTX: first paragraph (slide title)
+  bullets?: string[]; // PPTX: remaining paragraphs
 }
 
 export interface SourceDocument {

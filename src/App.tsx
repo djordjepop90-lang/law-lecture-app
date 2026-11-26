@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Scheduler, type QueueEvent } from './scheduler';
 import { TIMING, ENGINE } from './config';
 import * as db from './db';
@@ -6,6 +6,8 @@ import type { Chapter, GlossaryTerm, Outline, SourceDocument, Storyboard, Langua
 import { detectChapters, pagesText } from './chapters';
 import { generateOutlineLocal, generateStoryboardLocal } from './engine';
 import { getSystemVoices, defaultVoiceForLang, type SystemVoice } from './audio';
+import { initSource, getSceneBackground } from './slides';
+import type { Scene } from './types';
 import { StatusBar } from './components/StatusBar';
 import SettingsPanel from './components/SettingsPanel';
 import UploadPanel from './components/UploadPanel';
@@ -79,6 +81,9 @@ const App: React.FC = () => {
         setChapters(savedChapters ?? detectChapters(savedDoc.pages, savedDoc.kind));
         setSelected(savedSelected ?? []);
         setWatchChapter(savedWatch ?? '');
+        // restore the original file so slides/pages can be rendered as video backgrounds
+        const blob = await db.getMeta<Blob>('fileBlob');
+        if (blob) await initSource(savedDoc, blob);
         const sbs: Record<string, Storyboard> = {};
         for (const ch of savedChapters ?? []) {
           const sb = await db.getStoryboard<Storyboard>(ch.id);
@@ -89,9 +94,11 @@ const App: React.FC = () => {
     })();
   }, []);
 
-  const handleDocument = async (d: SourceDocument, language: LanguageCode | 'unknown') => {
+  const handleDocument = async (d: SourceDocument, language: LanguageCode | 'unknown', file: File) => {
     const docWithLang = { ...d, language };
     setDoc(docWithLang);
+    await db.setMeta('fileBlob', file); // keep the original for slide rendering
+    await initSource(docWithLang, file);
     const chs = detectChapters(d.pages, d.kind);
     setChapters(chs);
     setSelected(chs.length ? [chs[0].id] : []); // default: first chapter only
@@ -165,6 +172,11 @@ const App: React.FC = () => {
     setDoc(null); setChapters([]); setSelected([]); setStoryboards({}); setWatchChapter('');
   };
 
+  const loadBackground = useCallback(
+    (scene: Scene) => (doc ? getSceneBackground(doc, scene) : Promise.resolve(null)),
+    [doc],
+  );
+
   const watchStoryboard = storyboards[watchChapter];
   const glossary: GlossaryTerm[] = useMemo(() => {
     const sb = watchStoryboard;
@@ -192,11 +204,11 @@ const App: React.FC = () => {
       <StatusBar events={events} slowMode={slowMode} onToggleSlow={() => setSlowMode((s) => !s)} />
 
       {!doc ? (
-        <UploadPanel onDocument={(d, lang) => void handleDocument(d, lang)} busy={false} />
+        <UploadPanel onDocument={(d, lang, f) => void handleDocument(d, lang, f)} busy={false} />
       ) : (
         <>
           <p className="muted">Loaded: <b>{doc.name}</b> · {doc.pages.length} pages · {doc.totalWords.toLocaleString()} words · language: {doc.language} · engine: {ENGINE.name}</p>
-          <UploadPanel onDocument={(d, lang) => void handleDocument(d, lang)} busy={false} />
+          <UploadPanel onDocument={(d, lang, f) => void handleDocument(d, lang, f)} busy={false} />
           <ChapterPanel
             chapters={chapters}
             selected={selected}
@@ -230,6 +242,7 @@ const App: React.FC = () => {
                   voice={voice}
                   lang={doc.language}
                   theme={theme}
+                  loadBackground={loadBackground}
                 />
                 <Sidebar
                   glossary={glossary}
@@ -242,6 +255,7 @@ const App: React.FC = () => {
                 storyboard={watchStoryboard}
                 chapterLabel={chapters.find((c) => c.id === watchChapter)?.title ?? watchChapter}
                 theme={theme}
+                loadBackground={loadBackground}
               />
             </>
           )}

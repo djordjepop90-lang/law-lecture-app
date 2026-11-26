@@ -7,6 +7,7 @@ interface Props {
   storyboard: Storyboard;
   chapterLabel: string;
   theme: 'dark' | 'light';
+  loadBackground: (scene: import('../types').Scene) => Promise<HTMLCanvasElement | null>;
 }
 
 function pickMime(): string {
@@ -24,7 +25,7 @@ function pickMime(): string {
 // The narration itself is spoken live by the browser (speechSynthesis) during
 // playback; browser speech output cannot be captured into a media file, so
 // the export contains the fully animated video with burned-in captions.
-const ExportPanel: React.FC<Props> = ({ storyboard, chapterLabel, theme }) => {
+const ExportPanel: React.FC<Props> = ({ storyboard, chapterLabel, theme, loadBackground }) => {
   const [progress, setProgress] = useState('');
   const [link, setLink] = useState('');
   const [error, setError] = useState('');
@@ -56,6 +57,7 @@ const ExportPanel: React.FC<Props> = ({ storyboard, chapterLabel, theme }) => {
       const durations = storyboard.scenes.map((s) => estimateSceneDuration(s, 1));
       const total = durations.reduce((a, b) => a + b, 0);
       const t0 = performance.now();
+      const bgCache = new Map<string, HTMLCanvasElement | null>();
       await new Promise<void>((resolve) => {
         // Timer-driven loop (not rAF) so a hidden/throttled tab cannot stall
         // the export; every frame is exception-proof so one bad scene can
@@ -69,9 +71,12 @@ const ExportPanel: React.FC<Props> = ({ storyboard, chapterLabel, theme }) => {
               for (let i = 0; i < durations.length; i++) { if (elapsed >= acc) { si = i; } acc += durations[i]; }
               const sceneStart = durations.slice(0, si).reduce((a, b) => a + b, 0);
               const sceneProgress = Math.min(1, Math.max(0, (elapsed - sceneStart) / Math.max(0.001, durations[si])));
-              await renderScene(ctx, storyboard.scenes[si], {
+              const sc = storyboard.scenes[si];
+              if (!bgCache.has(sc.id)) bgCache.set(sc.id, await loadBackground(sc));
+              await renderScene(ctx, sc, {
                 theme, progress: sceneProgress, showCaptions: true, chapterLabel,
                 sceneIndex: si, sceneCount: storyboard.scenes.length, timeSeconds: elapsed,
+                background: bgCache.get(sc.id) ?? null,
               });
               setProgress(`Exporting… scene ${si + 1}/${storyboard.scenes.length} · ${Math.round(p * 100)}%`);
               if (elapsed >= total + 0.25) {
