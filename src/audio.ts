@@ -12,11 +12,19 @@ export interface SystemVoice {
   name: string;
   lang: string;
   voiceURI: string;
+  localService: boolean;
+  isDefault: boolean;
 }
 
 export function getSystemVoices(): SystemVoice[] {
   if (typeof speechSynthesis === 'undefined') return [];
-  return speechSynthesis.getVoices().map((v) => ({ name: v.name, lang: v.lang, voiceURI: v.voiceURI }));
+  return speechSynthesis.getVoices().map((v) => ({
+    name: v.name,
+    lang: v.lang,
+    voiceURI: v.voiceURI,
+    localService: v.localService,
+    isDefault: v.default,
+  }));
 }
 
 export function defaultVoiceForLang(lang: string): SystemVoice | null {

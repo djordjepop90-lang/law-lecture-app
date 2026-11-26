@@ -9,6 +9,7 @@ import { getSystemVoices, defaultVoiceForLang, type SystemVoice } from './audio'
 import { StatusBar } from './components/StatusBar';
 import SettingsPanel from './components/SettingsPanel';
 import UploadPanel from './components/UploadPanel';
+import ReadAloudPanel from './components/ReadAloudPanel';
 import ChapterPanel from './components/ChapterPanel';
 import Player from './components/Player';
 import Sidebar from './components/Sidebar';
@@ -196,6 +197,7 @@ const App: React.FC = () => {
       ) : (
         <>
           <p className="muted">Loaded: <b>{doc.name}</b> · {doc.pages.length} pages · {doc.totalWords.toLocaleString()} words · language: {doc.language} · engine: {ENGINE.name}</p>
+          <ReadAloudPanel doc={doc} voices={voices} />
           <UploadPanel onDocument={(d, lang) => void handleDocument(d, lang)} busy={false} />
           <ChapterPanel
             chapters={chapters}

@@ -92,4 +92,8 @@ label.row { flex-direction: row; align-items: center; gap: 6px; }
 .qq { font-weight: 600; margin: 0 0 4px; }
 .qa { margin: 0 0 4px; white-space: pre-wrap; }
 
+.badge { background: #2b5bd7; color: #fff; border-radius: 999px; padding: 1px 8px; font-size: 11px; font-weight: 600; }
+.nowreading { background: #0f1626; border: 1px solid #26314f; border-radius: 8px; padding: 8px 12px; font-size: 13px; font-style: italic; max-height: 90px; overflow: auto; }
+.app.light .nowreading { background: #faf8f1; border-color: #c9c2ae; }
+
 footer { margin-top: 24px; }
